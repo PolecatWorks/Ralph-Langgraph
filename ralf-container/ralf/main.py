@@ -30,5 +30,21 @@ def ask_cmd(question):
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
 
+@cli.command(name="loop")
+@click.argument("instruction_file", type=click.Path())
+@click.option("--directory", "-d", default=".", help="Working directory.")
+@click.option("--limit", "-l", default=1, type=int, help="Max iterations.")
+def loop_cmd(instruction_file, directory, limit):
+    """
+    Run the Ralf loop.
+
+    INSTRUCTION_FILE is the path to the file containing instructions.
+    """
+    try:
+        from ralf.loop import run_loop
+        run_loop(instruction_file, directory, limit)
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+
 if __name__ == "__main__":
     cli()

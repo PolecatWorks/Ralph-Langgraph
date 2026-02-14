@@ -54,8 +54,20 @@ def run_loop(instruction: str, directory: str, limit: int, config: ralphConfig):
     # Ensure environment is set up
     ensure_prompts_files(directory)
 
+    # Change working directory to the target workspace
+    # This ensures that all agent file operations (which default to relative paths)
+    # happen within the workspace.
+    abs_dir = os.path.abspath(directory)
+    try:
+         os.chdir(abs_dir)
+         click.echo(f"Changed working directory to {abs_dir}")
+    except Exception as e:
+         click.echo(f"Error changing directory to {abs_dir}: {e}", err=True)
+         return
+
     # Create the agent once
-    agent = create_single_step_agent(instruction, directory, config)
+    # We pass abs_dir, but since we are IN abs_dir, tools working on "." will work fine.
+    agent = create_single_step_agent(instruction, abs_dir, config)
 
     # Initialize messages with the user's request
     messages = [("user", "Please execute the instruction.")]
@@ -72,11 +84,19 @@ def run_loop(instruction: str, directory: str, limit: int, config: ralphConfig):
             # create_single_step_agent uses a StateGraph with "messages" key.
             # invoking it with input state returns the final state.
 
+            # Keep track of message count before invoke
+            prev_msg_count = len(messages)
+
             result = agent.invoke({"messages": messages})
 
             # Update our local messages state with the result from the agent.
             # The result from invoke(state) is the final state.
             messages = result.get("messages", [])
+
+            # Print new messages
+            new_msgs = messages[prev_msg_count:]
+            for msg in new_msgs:
+                click.echo(f"\n[{msg.type.upper()}]: {msg.content}\n")
 
             # Check if the agent signalled 'done'.
             # We look for a ToolMessage with the content "ralph_DONE"

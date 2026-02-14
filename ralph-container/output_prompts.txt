@@ -1,4 +1,0 @@
-Usage: ralph loop [OPTIONS] WORKDIR INSTRUCTION_FILE
-Try 'ralph loop --help' for help.
-
-Error: No such option: --workdir

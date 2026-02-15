@@ -27,7 +27,7 @@ class LangchainConfig(BaseModel):
     Configuration for LangChain, supporting both Azure OpenAI and GitHub-hosted models
     """
 
-    model_provider: Literal["azure_openai", "github", "google_genai"] = Field(default="google_genai", description="Provider for the model: 'azure' or 'github'")
+    model_provider: Literal["azure_openai", "github", "google_genai", "ollama"] = Field(default="google_genai", description="Provider for the model: 'azure' or 'github'")
 
     httpx_verify_ssl: str | bool = Field(
         default=True,
@@ -57,6 +57,13 @@ class LangchainConfig(BaseModel):
         default=None,
         description="Optional API key for authenticated access to Genai model",
     )
+
+    # Ollama settings
+    ollama_base_url: str | None = Field(
+        default=None,
+        description="Base URL for Ollama service (e.g., http://localhost:11434)",
+    )
+
 
     # Common settings
     model: str = Field(description="The model to use (e.g., 'gemini-1.5-flash-latest' or GitHub model name)")

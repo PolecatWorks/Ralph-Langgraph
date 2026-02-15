@@ -85,16 +85,18 @@ def ask_cmd(ctx, config, secrets, question):
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
 
-@cli.command(name="loop")
+@cli.command(name="react")
 @shared_options
+@click.argument("workdir", type=click.Path(exists=True, writable=True, dir_okay=True))
 @click.argument("instruction_file", type=click.Path(exists=True))
-@click.option("--directory", "-d", type=click.Path(exists=True, writable=True, dir_okay=True), help="Working directory.")
 @click.option("--limit", "-l", default=1, type=int, help="Max iterations.")
-def loop_cmd(ctx, config, secrets, instruction_file, directory, limit):
+def react_cmd(ctx, config, secrets, instruction_file, workdir, limit):
     """
-    Run the Ralph loop.
+    Run the Ralph react agent.
 
     INSTRUCTION_FILE is the path to the file containing instructions.
+
+    WORKDIR is the working directory.
     """
     try:
         # config is a file object (BufferedReader) due to click.File("rb")
@@ -105,10 +107,40 @@ def loop_cmd(ctx, config, secrets, instruction_file, directory, limit):
 
         configObj = RalphConfig.from_yaml_and_secrets_dir(config_path, secrets_path)
 
-        from ralph.loop import run_loop
-        run_loop(instruction_file, directory, limit, configObj)
+        from ralph.react import run_react
+        run_react(instruction_file, workdir, limit, configObj)
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
+
+
+
+@cli.command(name="loop")
+@shared_options
+@click.argument("workdir", type=click.Path(exists=True, writable=True, dir_okay=True))
+@click.argument("instruction_file", type=click.Path(exists=True))
+@click.option("--limit", "-l", default=1, type=int, help="Max iterations.")
+def loop_cmd(ctx, config, secrets, instruction_file, workdir, limit):
+    """
+    Run the Ralph loop agent.
+
+    INSTRUCTION_FILE is the path to the file containing instructions.
+
+    WORKDIR is the working directory.
+    """
+    try:
+        # config is a file object (BufferedReader) due to click.File("rb")
+        # secrets is a string due to click.Path()
+
+        config_path = Path(config.name)
+        secrets_path = Path(secrets)
+
+        configObj = RalphConfig.from_yaml_and_secrets_dir(config_path, secrets_path)
+
+        from ralph.graph import run_loop
+        run_loop(instruction_file, workdir, limit, configObj)
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+
 
 if __name__ == "__main__":
     cli()

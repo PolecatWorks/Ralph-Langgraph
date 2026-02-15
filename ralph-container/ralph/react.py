@@ -6,7 +6,7 @@ import os
 from ralph.config import RalphConfig
 from ralph.state import AgentState
 
-def run_loop(instruction_file: str, directory: str, limit: int, config: RalphConfig):
+def run_react(instruction_file: str, directory: str, limit: int, config: RalphConfig):
     """
     Runs the Ralph loop.
 

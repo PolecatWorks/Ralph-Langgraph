@@ -17,7 +17,7 @@ def test_ask_command():
         mock_chain.invoke.return_value = "This is a mock response from the LLM."
 
         # Patch RalphConfig to return a mock config object
-        with patch("ralph.main.RalphConfig.from_yaml_and_secrets_dir") as mock_config_cls:
+        with patch("ralph.config.RalphConfig.from_yaml_and_secrets_dir") as mock_config_cls:
             mock_config_obj = MagicMock()
             mock_config_cls.return_value = mock_config_obj
 
@@ -47,7 +47,7 @@ def test_ask_command_error():
         os.makedirs("secrets", exist_ok=True)
 
         # Simulate an error during chain creation or invocation
-        with patch("ralph.main.RalphConfig.from_yaml_and_secrets_dir") as mock_config_cls:
+        with patch("ralph.config.RalphConfig.from_yaml_and_secrets_dir") as mock_config_cls:
             mock_config_obj = MagicMock()
             mock_config_cls.return_value = mock_config_obj
 

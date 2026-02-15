@@ -1,72 +1,68 @@
-import pytest
 from unittest.mock import MagicMock, patch
-from ralph.loop import run_loop
-from langchain_core.messages import ToolMessage, AIMessage
+from click.testing import CliRunner
+from ralph.cli import cli
+from ralph.state import AgentState
 import os
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 
-# Mock the agent's behavior
-def test_run_loop_iterations():
-    with patch("ralph.agent.create_agent") as mock_create_agent:
-        mock_agent = MagicMock()
-        # Setup mock return value for invoke
-        mock_agent.invoke.return_value = {"messages": [AIMessage(content="I am working")], "remaining_steps": 10}
-        mock_create_agent.return_value = mock_agent
+def test_loop_command():
+    runner = CliRunner()
 
-        # Mock RalphConfig
-        mock_config = MagicMock()
+    with runner.isolated_filesystem():
+        # Create dummy config and secrets
+        with open("config.yaml", "w") as f:
+            f.write("logging:\n  version: 1\n")
+        os.makedirs("secrets", exist_ok=True)
+        # Create instruction file
+        with open("instructions.txt", "w") as f:
+            f.write("Do something.")
+        os.makedirs("workdir", exist_ok=True)
 
-        # Create a dummy instruction file
-        instruction_file = "test_instruction.txt"
-        with open(instruction_file, "w") as f:
-            f.write("Do something")
+        with patch("ralph.config.RalphConfig.from_yaml_and_secrets_dir") as mock_config_cls:
+            mock_config_obj = MagicMock()
+            mock_config_cls.return_value = mock_config_obj
 
-        try:
-            # Run loop for 2 iterations
-            run_loop(instruction_file, ".", 2, mock_config)
+            # Mock create_single_step_agent
+            with patch("ralph.agent.create_single_step_agent") as mock_create_agent:
+                mock_agent = MagicMock()
+                mock_create_agent.return_value = mock_agent
 
-            # Verify create_agent was called twice
-            assert mock_create_agent.call_count == 2
+                # Mock responses
+                mock_msg_1 = AIMessage(content="I am working.")
+                mock_msg_2 = ToolMessage(content="RALPH_DONE", tool_call_id="1")
 
-            # Verify create_agent was called with correct args
-            mock_create_agent.assert_called_with("Do something", ".", mock_config)
+                def invoke_side_effect(state, *args, **kwargs):
+                    msgs = state["messages"]
+                    # Convert input dict/tuples to Messages for the return value
+                    # In real LangGraph, inputs are processed.
+                    # We assume inputs are what run_loop passed: [("user", "Please...")]
+                    # We convert them to HumanMessage for the result
 
-            # Verify invoke was called twice
-            assert mock_agent.invoke.call_count == 2
+                    new_msgs = []
+                    for m in msgs:
+                        if isinstance(m, tuple) and m[0] == "user":
+                            new_msgs.append(HumanMessage(content=m[1]))
+                        else:
+                            new_msgs.append(m)
 
-            # Verify arguments to invoke
-            # run_loop passes absolute path
-            abs_cwd = os.path.abspath(".")
-            expected_args = {"messages": [("user", "Please execute the instruction.")]}
-            expected_kwargs = {"config": {"configurable": {"workdir": abs_cwd}}}
-            mock_agent.invoke.assert_called_with(expected_args, **expected_kwargs)
+                    # If this is the first call
+                    # We check if last message is user message (which means start of conversation)
+                    # messages = [HumanMessage]
+                    if len(msgs) == 1:
+                        return {"messages": new_msgs + [mock_msg_1]}
+                    # If this is subsequent call
+                    # messages = [HumanMessage, AIMessage]
+                    else:
+                        return {"messages": new_msgs + [mock_msg_2]}
 
-        finally:
-            if os.path.exists(instruction_file):
-                os.remove(instruction_file)
+                mock_agent.invoke.side_effect = invoke_side_effect
 
-def test_run_loop_done_signal():
-    with patch("ralph.agent.create_agent") as mock_create_agent:
-        mock_agent = MagicMock()
-        # Setup mock return value to simulate done signal in first iteration
-        # The loop checks for ToolMessage with content "RALPH_DONE"
-        done_message = ToolMessage(content="RALPH_DONE", tool_call_id="1", name="done_tool")
-        mock_agent.invoke.return_value = {"messages": [AIMessage(content="Calling done"), done_message, AIMessage(content="I am done")], "remaining_steps": 9}
-        mock_create_agent.return_value = mock_agent
+                # Run loop with limit 2
+                result = runner.invoke(cli, ["loop", "--config", "config.yaml", "--secrets", "secrets", "--limit", "2", "workdir", "instructions.txt"])
 
-        # Mock RalphConfig
-        mock_config = MagicMock()
-
-        # Create a dummy instruction file
-        instruction_file = "test_instruction_done.txt"
-        with open(instruction_file, "w") as f:
-            f.write("Do something")
-
-        try:
-            # Run loop with limit 5, but should stop after 1
-            run_loop(instruction_file, ".", 5, mock_config)
-
-            # Verify create_agent was called only once
-            assert mock_create_agent.call_count == 1
-        finally:
-            if os.path.exists(instruction_file):
-                os.remove(instruction_file)
+        assert result.exit_code == 0, f"Exit code: {result.exit_code}, Output: {result.output}"
+        assert "Starting iteration 1/2..." in result.output
+        assert "[AI]: I am working." in result.output
+        assert "Starting iteration 2/2..." in result.output
+        assert "[TOOL]: RALPH_DONE" in result.output
+        assert "Objective met (agent signaled done)." in result.output

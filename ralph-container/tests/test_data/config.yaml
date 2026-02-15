@@ -25,8 +25,13 @@ logging:
 #   app_id: bot/id
 #   app_password: bot/passord
 aiclient:
-  model: gemini-2.0-flash
-  model_provider: google_genai
+  # model: gemini-2.0-flash
+  # model_provider: google_genai
+
+  model: qwen2.5-coder:14b
+  model_provider: ollama
+  ollama_base_url: http://localhost:11434
+
   # model_provider: github
   # github_model_repo: openai/gpt-4.1
   # github_api_base_url: https://models.github.ai/inference

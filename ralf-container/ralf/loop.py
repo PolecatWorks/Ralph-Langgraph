@@ -4,6 +4,7 @@ import os
 # from ralf.agent import create_agent
 
 from ralf.config import RalfConfig
+from ralf.state import AgentState
 
 def run_loop(instruction_file: str, directory: str, limit: int, config: RalfConfig):
     """
@@ -45,9 +46,12 @@ def run_loop(instruction_file: str, directory: str, limit: int, config: RalfConf
             # Run the agent
             result = agent.invoke({"messages": [("user", "Please execute the instruction.")]})
 
+            # Convert result to AgentState for validation and easier access
+            state = AgentState(**result)
+
             # Check if the agent signalled 'done'.
             # We look for a ToolMessage with the content "RALF_DONE"
-            messages = result.get("messages", [])
+            messages = state.messages
             is_done = False
             for msg in messages:
                 if hasattr(msg, "content") and msg.content == "RALF_DONE":

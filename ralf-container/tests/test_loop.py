@@ -9,7 +9,7 @@ def test_run_loop_iterations():
     with patch("ralf.agent.create_agent") as mock_create_agent:
         mock_agent = MagicMock()
         # Setup mock return value for invoke
-        mock_agent.invoke.return_value = {"messages": [AIMessage(content="I am working")]}
+        mock_agent.invoke.return_value = {"messages": [AIMessage(content="I am working")], "remaining_steps": 10}
         mock_create_agent.return_value = mock_agent
 
         # Mock RalfConfig
@@ -50,7 +50,7 @@ def test_run_loop_done_signal():
         # Setup mock return value to simulate done signal in first iteration
         # The loop checks for ToolMessage with content "RALF_DONE"
         done_message = ToolMessage(content="RALF_DONE", tool_call_id="1", name="done_tool")
-        mock_agent.invoke.return_value = {"messages": [AIMessage(content="Calling done"), done_message, AIMessage(content="I am done")]}
+        mock_agent.invoke.return_value = {"messages": [AIMessage(content="Calling done"), done_message, AIMessage(content="I am done")], "remaining_steps": 9}
         mock_create_agent.return_value = mock_agent
 
         # Mock RalfConfig

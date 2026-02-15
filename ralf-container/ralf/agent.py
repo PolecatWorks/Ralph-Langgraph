@@ -3,6 +3,7 @@ from langgraph.prebuilt import create_react_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.runnables import RunnableConfig
 from ralf.config import RalfConfig
+from ralf.state import AgentState
 import os
 import subprocess
 from typing import List, Optional
@@ -135,5 +136,5 @@ If you cannot complete the task in one step, make progress and stop. You will be
 """
 
     # create_react_agent returns a CompiledGraph
-    graph = create_react_agent(llm, tools=agent_tools, prompt=system_prompt)
+    graph = create_react_agent(llm, tools=agent_tools, prompt=system_prompt, state_schema=AgentState)
     return graph

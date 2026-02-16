@@ -2,6 +2,8 @@
 
 A CLI tool to iterate on a developer design.
 
+See [Full Documentation](RALPH_DOCS.md) for detailed information on how to use Ralph, its architecture, and configuration.
+
 ## Installation
 
 ```bash

@@ -1,3 +1,10 @@
+"""
+Graph module for Ralph.
+
+This module manages the execution loop for the Ralph agent, including
+initializing prompts and running the agent loop with state management.
+"""
+
 import click
 import shutil
 import os
@@ -9,8 +16,12 @@ from ralph.config import RalphConfig
 
 def ensure_prompts_files(directory: str):
     """
-    Ensures that the prompts files (prompt, skills) exist in the working directory.
+    Ensure that the prompts files (prompt, skills) exist in the working directory.
+
     If not, copies them from the package source.
+
+    Args:
+        directory (str): The target working directory where prompts should be.
     """
     workdir_prompts = Path(directory) / "prompts"
 
@@ -61,13 +72,16 @@ def ensure_prompts_files(directory: str):
 
 def run_loop(instruction_file: str, directory: str, limit: int, config: RalphConfig):
     """
-    Runs the ralph loop.
+    Run the Ralph loop.
+
+    This function initializes the agent, sets up the environment, and runs the
+    agent in a loop until the objective is met or the limit is reached.
 
     Args:
-        instruction_file: Path to the instruction file.
-        directory: Working directory.
-        limit: Max iterations.
-        config: The ralph configuration object.
+        instruction_file (str): Path to the instruction file.
+        directory (str): The working directory.
+        limit (int): Max iterations for the loop.
+        config (RalphConfig): The Ralph configuration object.
     """
 
     # Verify instruction file exists

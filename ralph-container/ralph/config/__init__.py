@@ -1,3 +1,11 @@
+"""
+Configuration module for Ralph.
+
+This module defines the configuration models for the Ralph service,
+including AI client settings, toolbox settings, and general application settings.
+It uses Pydantic for validation and settings management.
+"""
+
 from pydantic import ConfigDict, Field, BaseModel, SecretStr, field_validator, HttpUrl
 from pathlib import Path
 from typing import (
@@ -17,14 +25,42 @@ from pydantic_settings import (
 
 class ToolBoxConfig(BaseModel):
     """
-    Configuration for the toolbox
+    Configuration for the toolbox.
+
+    Attributes:
+        allowed_tools (list[str]): List of allowed tools.
     """
     allowed_tools: list[str] = Field(default_factory=list, description="List of allowed tools")
 
 
 class LangchainConfig(BaseModel):
     """
-    Configuration for LangChain, supporting both Azure OpenAI and GitHub-hosted models
+    Configuration for LangChain.
+
+    Supports multiple providers including Azure OpenAI, GitHub-hosted models,
+    Google GenAI, and Ollama.
+
+    Attributes:
+        model_provider (Literal["azure_openai", "github", "google_genai", "ollama"]):
+            Provider for the model. Defaults to "google_genai".
+        httpx_verify_ssl (str | bool):
+            Whether to verify SSL certificates for HTTP requests.
+            Can be a boolean or a path to a CA bundle. Defaults to True.
+        azure_endpoint (HttpUrl | None): Azure OpenAI endpoint.
+        azure_api_key (SecretStr | None): API key for Azure OpenAI access.
+        azure_deployment (str | None): Azure OpenAI deployment name.
+        azure_api_version (str | None): API version for Azure OpenAI.
+        github_model_repo (str | None): GitHub repository containing the model.
+        github_api_base_url (HttpUrl | None): Base URL for the GitHub model API endpoint.
+        github_api_key (SecretStr | None): API key for GitHub model access.
+        google_api_key (SecretStr | None): API key for Google GenAI access.
+        ollama_base_url (str | None): Base URL for Ollama service.
+        model (str): The model to use (e.g., 'gemini-1.5-flash-latest').
+        temperature (float): Temperature for the model. Defaults to 0.7.
+        context_length (int): Maximum context length for the model. Defaults to 4096.
+        stop_sequences (list[str]): List of sequences that will stop generation.
+        timeout (int): Timeout in seconds for model API calls. Defaults to 60.
+        streaming (bool): Whether to stream responses from the model. Defaults to True.
     """
 
     model_provider: Literal["azure_openai", "github", "google_genai", "ollama"] = Field(default="google_genai", description="Provider for the model: 'azure' or 'github'")
@@ -81,7 +117,16 @@ class LangchainConfig(BaseModel):
     @field_validator("model_provider")
     @classmethod
     def validate_provider_settings(cls, v, values):
-        """Validate that the required settings are present for the chosen provider"""
+        """
+        Validate that the required settings are present for the chosen provider.
+
+        Args:
+            v (str): The value of the field being validated.
+            values (ValidationInfo): The validation info context.
+
+        Returns:
+            str: The validated value.
+        """
         # Dictionary access is safer than .get() on the values object in newer Pydantic versions within validators if it's a ValidationInfo object,
         # but here 'values' is likely a dict or object depending on Pydantic version.
         # For Pydantic v2 mode='before' it's a dict.
@@ -94,7 +139,12 @@ class LangchainConfig(BaseModel):
 
 class RalphConfig(BaseSettings):
     """
-    Configuration for the Ralph service
+    Main configuration for the Ralph service.
+
+    Attributes:
+        logging (dict[str, Any]): Logging configuration.
+        aiclient (LangchainConfig): AI Client configuration.
+        toolbox (ToolBoxConfig): Toolbox configuration.
     """
 
     logging: dict[str, Any] = Field(default_factory=dict, description="Logging configuration")
@@ -109,6 +159,16 @@ class RalphConfig(BaseSettings):
 
     @classmethod
     def from_yaml_and_secrets_dir(cls, yaml_file: Path, secrets_path: Path) -> Self:
+        """
+        Create a RalphConfig instance from a YAML file and secrets directory.
+
+        Args:
+            yaml_file (Path): Path to the YAML configuration file.
+            secrets_path (Path): Path to the secrets directory.
+
+        Returns:
+            RalphConfig: The configured RalphConfig instance.
+        """
 
         cls.model_config["yaml_file"] = yaml_file
         cls.model_config["secrets_dir"] = secrets_path
@@ -124,6 +184,19 @@ class RalphConfig(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        """
+        Customize the settings sources to include nested secrets and YAML config.
+
+        Args:
+            settings_cls (Type[BaseSettings]): The settings class.
+            init_settings (PydanticBaseSettingsSource): Initial settings source.
+            env_settings (PydanticBaseSettingsSource): Environment settings source.
+            dotenv_settings (PydanticBaseSettingsSource): Dotenv settings source.
+            file_secret_settings (PydanticBaseSettingsSource): File secret settings source.
+
+        Returns:
+            Tuple[PydanticBaseSettingsSource, ...]: The customized settings sources.
+        """
 
         # Explicitly create NestedSecretsSettingsSource with NO prefix
         # so it maps filenames like 'api_key' and 'db/password' directly.

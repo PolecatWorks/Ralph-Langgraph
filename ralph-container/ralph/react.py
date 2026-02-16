@@ -1,3 +1,10 @@
+"""
+React module for Ralph.
+
+This module provides the functionality to run the Ralph agent using the
+ReAct (Reasoning and Acting) pattern.
+"""
+
 import click
 import os
 # We will import create_agent later when it is implemented
@@ -8,13 +15,13 @@ from ralph.state import AgentState
 
 def run_react(instruction_file: str, directory: str, limit: int, config: RalphConfig):
     """
-    Runs the Ralph loop.
+    Run the Ralph ReAct agent loop.
 
     Args:
-        instruction_file: Path to the instruction file.
-        directory: Working directory.
-        limit: Max iterations.
-        config: The Ralph configuration object.
+        instruction_file (str): Path to the file containing instructions.
+        directory (str): The working directory.
+        limit (int): The maximum number of iterations to run the agent.
+        config (RalphConfig): The Ralph configuration object.
     """
 
     # Verify instruction file exists
@@ -48,9 +55,6 @@ def run_react(instruction_file: str, directory: str, limit: int, config: RalphCo
                 {"messages": [("user", "Please execute the instruction.")]},
                 config={"configurable": {"workdir": os.path.abspath(directory)}}
             )
-
-            # Convert result to AgentState for validation and easier access
-            state = AgentState(**result)
 
             # Convert result to AgentState for validation and easier access
             state = AgentState(**result)

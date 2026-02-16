@@ -1,3 +1,10 @@
+"""
+Agent module for Ralph.
+
+This module contains the core agent logic, including tool definitions,
+LLM initialization, and agent creation functions using LangGraph.
+"""
+
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -12,14 +19,37 @@ import click
 from typing import List, Optional, Any
 
 def _get_workdir(config: RunnableConfig) -> str:
-    """Extract and validate the working directory from the runtime config."""
+    """
+    Extract and validate the working directory from the runtime config.
+
+    Args:
+        config (RunnableConfig): The runtime configuration containing the 'workdir'.
+
+    Returns:
+        str: The absolute path to the working directory.
+
+    Raises:
+        ValueError: If 'workdir' is not found in the configuration.
+    """
     workdir = config.get("configurable", {}).get("workdir")
     if not workdir:
         raise ValueError("Workdir not found in context configuration")
     return os.path.abspath(workdir)
 
 def _resolve_path(path: str, workdir: str) -> str:
-    """Resolve a path relative to the workdir and ensure it is within the workdir."""
+    """
+    Resolve a path relative to the workdir and ensure it is within the workdir.
+
+    Args:
+        path (str): The path to resolve. Can be absolute or relative.
+        workdir (str): The base working directory.
+
+    Returns:
+        str: The resolved absolute path.
+
+    Raises:
+        ValueError: If the resolved path is outside the working directory (path traversal).
+    """
     abs_workdir = os.path.abspath(workdir)
     # If path is absolute, check if it's within workdir. If relative, join with workdir.
     if os.path.isabs(path):
@@ -34,7 +64,16 @@ def _resolve_path(path: str, workdir: str) -> str:
 
 @tool
 def list_files(config: RunnableConfig, path: str = ".") -> List[str]:
-    """List all files in the given directory."""
+    """
+    List all files in the given directory.
+
+    Args:
+        config (RunnableConfig): The runtime configuration.
+        path (str, optional): The directory path to list files from. Defaults to ".".
+
+    Returns:
+        List[str]: A list of file paths relative to the target directory.
+    """
     try:
         workdir = _get_workdir(config)
         target_path = _resolve_path(path, workdir)
@@ -57,7 +96,16 @@ def list_files(config: RunnableConfig, path: str = ".") -> List[str]:
 
 @tool
 def read_file(path: str, config: RunnableConfig) -> str:
-    """Read the content of a file."""
+    """
+    Read the content of a file.
+
+    Args:
+        path (str): The path to the file to read.
+        config (RunnableConfig): The runtime configuration.
+
+    Returns:
+        str: The content of the file, or an error message if reading fails.
+    """
     try:
         workdir = _get_workdir(config)
         target_path = _resolve_path(path, workdir)
@@ -69,7 +117,17 @@ def read_file(path: str, config: RunnableConfig) -> str:
 
 @tool
 def write_file(path: str, content: str, config: RunnableConfig) -> str:
-    """Write content to a file."""
+    """
+    Write content to a file.
+
+    Args:
+        path (str): The path to the file to write.
+        content (str): The content to write to the file.
+        config (RunnableConfig): The runtime configuration.
+
+    Returns:
+        str: A success message or an error message if writing fails.
+    """
     try:
         workdir = _get_workdir(config)
         target_path = _resolve_path(path, workdir)
@@ -85,7 +143,17 @@ def write_file(path: str, content: str, config: RunnableConfig) -> str:
 def update_prd(story_title: str, config: RunnableConfig, story_id: Optional[str] = None, notes: Optional[str] = None) -> str:
     """
     Add a new User Story to the PRD (prd.json).
+
     Use this tool to track requirements and progress.
+
+    Args:
+        story_title (str): The title of the user story.
+        config (RunnableConfig): The runtime configuration.
+        story_id (Optional[str], optional): The ID of the story. Defaults to a generated UUID.
+        notes (Optional[str], optional): Additional notes for the story. Defaults to None.
+
+    Returns:
+        str: A success message or an error message if updating the PRD fails.
     """
     try:
         workdir = _get_workdir(config)
@@ -127,7 +195,16 @@ def update_prd(story_title: str, config: RunnableConfig, story_id: Optional[str]
 
 @tool
 def run_command(command: str, config: RunnableConfig) -> str:
-    """Run a shell command."""
+    """
+    Run a shell command.
+
+    Args:
+        command (str): The shell command to run.
+        config (RunnableConfig): The runtime configuration.
+
+    Returns:
+        str: The stdout and stderr output of the command, or an error message.
+    """
     try:
         workdir = _get_workdir(config)
 
@@ -145,7 +222,15 @@ def run_command(command: str, config: RunnableConfig) -> str:
 
 @tool
 def done(config: RunnableConfig) -> str:
-    """Signal that the objective is met and the loop should terminate."""
+    """
+    Signal that the objective is met and the loop should terminate.
+
+    Args:
+        config (RunnableConfig): The runtime configuration.
+
+    Returns:
+        str: The termination signal "RALPH_DONE".
+    """
     # Ensure context is valid even if not used, enforcing consistency
     _get_workdir(config)
     return "RALPH_DONE"
@@ -186,7 +271,18 @@ def update_instruction(new_instruction: str, config: RunnableConfig) -> str:
 
 
 def llm_model(config: LangchainConfig):
+    """
+    Initialize and return the LLM model based on the configuration.
 
+    Args:
+        config (LangchainConfig): The LangChain configuration.
+
+    Returns:
+        BaseChatModel: The initialized chat model (Google, Azure, or Ollama).
+
+    Raises:
+        ValueError: If the model provider is unsupported.
+    """
     match config.model_provider:
         case "google_genai":
             from langchain_google_genai import ChatGoogleGenerativeAI
@@ -218,6 +314,19 @@ def llm_model(config: LangchainConfig):
 
 
 def _initialize_agent_context(directory: str, config: RalphConfig):
+    """
+    Initialize the agent context, including LLM, tools, and system prompt.
+
+    Args:
+        directory (str): The working directory.
+        config (RalphConfig): The Ralph configuration.
+
+    Returns:
+        tuple: A tuple containing the LLM, a list of tools, and the system prompt.
+
+    Raises:
+        ValueError: If the Google API key is missing when using Google GenAI.
+    """
     if config.aiclient.model_provider == "google_genai" and not config.aiclient.google_api_key:
         raise ValueError("GOOGLE_API_KEY environment variable is not set.")
 
@@ -244,6 +353,14 @@ def _initialize_agent_context(directory: str, config: RalphConfig):
 def create_agent(instruction: str, directory: str, config: RalphConfig):
     """
     Creates a LangGraph agent with access to tools.
+
+    Args:
+        instruction (str): The instruction for the agent.
+        directory (str): The working directory.
+        config (RalphConfig): The Ralph configuration.
+
+    Returns:
+        CompiledGraph: The compiled LangGraph agent.
     """
     llm, agent_tools, base_prompt = _initialize_agent_context(directory, config)
 
@@ -270,7 +387,16 @@ If you cannot complete the task in one step, make progress and stop. You will be
 def create_single_step_agent(instruction: str, directory: str, config: RalphConfig):
     """
     Creates a single-step agent that executes one loop of reasoning and action.
+
     It uses a StateGraph to define a linear workflow: Agent -> Tools -> END.
+
+    Args:
+        instruction (str): The instruction for the agent.
+        directory (str): The working directory.
+        config (RalphConfig): The Ralph configuration.
+
+    Returns:
+        CompiledGraph: The compiled LangGraph agent.
     """
     from langgraph.graph import StateGraph, START, END
     from langgraph.prebuilt import ToolNode

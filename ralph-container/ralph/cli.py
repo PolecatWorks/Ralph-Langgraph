@@ -1,4 +1,12 @@
+"""
+CLI module for Ralph.
+
+This module defines the command-line interface for the Ralph service,
+including commands for running agents, asking questions, and checking version.
+"""
+
 import click
+import sys
 from importlib.metadata import version as get_version, PackageNotFoundError
 from ralph.config import RalphConfig
 from pathlib import Path
@@ -6,6 +14,17 @@ from pathlib import Path
 
 # https://stackoverflow.com/questions/242485/starting-python-debugger-automatically-on-error
 def interactivedebugger(type, value, tb):
+    """
+    Launch an interactive debugger on exception.
+
+    This function is intended to be used as a sys.excepthook.
+    It checks if the session is interactive and launches pdb post-mortem if so.
+
+    Args:
+        type: The exception type.
+        value: The exception value.
+        tb: The traceback object.
+    """
     if hasattr(sys, "ps1") or not sys.stderr.isatty():
         # we are in interactive mode or we don't have a tty-like
         # device, so we call the default hook
@@ -28,7 +47,11 @@ def interactivedebugger(type, value, tb):
 @click.pass_context
 def cli(ctx, debug):
     """
-    Service and tools for basic service
+    Service and tools for basic service.
+
+    Args:
+        ctx (click.Context): The Click context object.
+        debug (bool): Whether to enable debug mode.
     """
     ctx.ensure_object(dict)
 
@@ -43,6 +66,15 @@ def cli(ctx, debug):
 
 
 def shared_options(function):
+    """
+    Decorator to add shared options (config and secrets) to a command.
+
+    Args:
+        function (callable): The command function to decorate.
+
+    Returns:
+        callable: The decorated command function.
+    """
     function = click.option("--config", required=True, type=click.File("rb"))(function)
     function = click.option("--secrets", required=True, type=click.Path(exists=True))(function)
 
@@ -67,7 +99,11 @@ def ask_cmd(ctx, config, secrets, question):
     """
     Ask a question to the LLM.
 
-    QUESTION is the question you want to ask.
+    Args:
+        ctx (click.Context): The Click context.
+        config (file): The configuration file object.
+        secrets (str): The path to the secrets directory.
+        question (str): The question to ask the LLM.
     """
     try:
         # config is a file object (BufferedReader) due to click.File("rb")
@@ -94,9 +130,13 @@ def react_cmd(ctx, config, secrets, instruction_file, workdir, limit):
     """
     Run the Ralph react agent.
 
-    INSTRUCTION_FILE is the path to the file containing instructions.
-
-    WORKDIR is the working directory.
+    Args:
+        ctx (click.Context): The Click context.
+        config (file): The configuration file object.
+        secrets (str): The path to the secrets directory.
+        instruction_file (str): The path to the file containing instructions.
+        workdir (str): The working directory path.
+        limit (int): Max iterations for the agent loop. Defaults to 1.
     """
     try:
         # config is a file object (BufferedReader) due to click.File("rb")
@@ -123,9 +163,13 @@ def loop_cmd(ctx, config, secrets, instruction_file, workdir, limit):
     """
     Run the Ralph loop agent.
 
-    INSTRUCTION_FILE is the path to the file containing instructions.
-
-    WORKDIR is the working directory.
+    Args:
+        ctx (click.Context): The Click context.
+        config (file): The configuration file object.
+        secrets (str): The path to the secrets directory.
+        instruction_file (str): The path to the file containing instructions.
+        workdir (str): The working directory path.
+        limit (int): Max iterations for the agent loop. Defaults to 1.
     """
     try:
         # config is a file object (BufferedReader) due to click.File("rb")
